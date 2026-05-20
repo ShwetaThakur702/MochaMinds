@@ -1,0 +1,21 @@
+# Secrets — never commit
+.env
+ui/.env
+
+# Uploaded RIS files (generated at runtime)
+data/RIS_upload_*.xlsx
+
+# Python
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Pipeline output
+output/
+
+# Frontend build artefacts
+ui/node_modules/
+ui/dist/
+
+# macOS
+.DS_Store

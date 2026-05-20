@@ -1,0 +1,19 @@
+# Secrets
+.env
+ui/.env.local
+config/*.json
+
+# Python
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Node
+ui/node_modules/
+ui/.next/
+
+# macOS
+.DS_Store
+
+# Runtime output
+reports/
