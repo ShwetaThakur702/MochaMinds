@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bench Agent Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --navy:        #3B1F6B;
+      --navy-light:  #4e2a8e;
+      --blue:        #C8E000;
+      --blue-mid:    #d4ea33;
+      --blue-pale:   #f5fac0;
+      --purple-pale: #F0EAF8;
+      --text:        #1e293b;
+      --text-muted:  #64748b;
+      --border:      #e2e8f0;
+      --bg:          #f1f5f9;
+      --white:       #ffffff;
+      --red:         #ef4444;
+      --red-pale:    #fee2e2;
+      --orange:      #f97316;
+      --orange-pale: #ffedd5;
+      --yellow:      #d97706;
+      --yellow-pale: #fef9c3;
+      --green:       #16a34a;
+      --green-pale:  #f0fdf4;
+      --shadow:      0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── HEADER ──────────────────────────────────────── */
+    header {
+      background: var(--navy);
+      color: #ffffff;
+      padding: 20px 32px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .header-left h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header-left .subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 3px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 13px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .banner.live   { background: #C8E000; color: #3B1F6B; }
+    .banner.static { background: #e2e8f0; color: #3B1F6B; }
+
+    .timestamp { color: #94a3b8; font-size: 12px; white-space: nowrap; }
+
+    /* ── MAIN LAYOUT ─────────────────────────────────── */
+    main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px 32px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* ── SECTION ─────────────────────────────────────── */
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--navy);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .count {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--border);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    /* ── CARD ────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(59,31,107,0.20);
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* ── SECTION 1 GRID ──────────────────────────────── */
+    .s1-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr 1fr 1fr;
+      gap: 14px;
+    }
+
+    .headcount-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 6px;
+    }
+    .headcount-num {
+      font-size: 60px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1;
+      letter-spacing: -2px;
+    }
+    .headcount-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .chart-wrap { position: relative; height: 175px; }
+    .chart-wrap-tall { position: relative; height: 265px; }
+
+    /* ── TABLES ──────────────────────────────────────── */
+    .table-scroll {
+      overflow: auto;
+      max-height: 420px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+    thead th {
+      background: var(--navy);
+      color: #ffffff;
+      padding: 9px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td {
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    /* Alert severity row colours */
+    tr.r-critical td { background: var(--red-pale);    }
+    tr.r-high     td { background: var(--orange-pale); }
+    tr.r-medium   td { background: var(--yellow-pale); }
+    tr.r-ok       td { background: var(--green-pale);  }
+
+    /* Freeze row highlight */
+    tr.r-freeze td { background: var(--purple-pale); }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+    .b-critical { background: var(--red);    color: #fff; }
+    .b-high     { background: var(--orange); color: #fff; }
+    .b-medium   { background: var(--yellow); color: #fff; }
+    .b-ok       { background: var(--green);  color: #fff; }
+    .b-freeze   { background: #C8E000; color: #3B1F6B; font-weight: 800; }
+    .b-nofreeze { background: var(--border); color: var(--text-muted); }
+
+    /* Narrative cell */
+    .narrative { max-width: 380px; font-size: 12px; color: #475569; line-height: 1.45; }
+
+    /* Numeric cells */
+    .num { text-align: center; font-variant-numeric: tabular-nums; }
+
+    /* Surplus positive/negative */
+    .surplus-pos { color: var(--red);   font-weight: 600; }
+    .surplus-neg { color: var(--green); font-weight: 600; }
+
+    /* Placeholder while loading */
+    .placeholder { text-align: center; padding: 32px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════ HEADER ════════════════ -->
+<header>
+  <div class="header-left">
+    <h1>Bench Agent Dashboard</h1>
+    <p class="subtitle">Resource Management Intelligence — Advisory Only</p>
+  </div>
+  <div class="header-right">
+    <span id="mode-banner" class="banner static">⚠ Static preview mode</span>
+    <span class="timestamp">Last Updated: <span id="ts">—</span></span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ════ SECTION 1: BENCH SUMMARY ════ -->
+  <section>
+    <h2 class="section-title">Bench Summary</h2>
+    <div class="s1-grid">
+
+      <div class="card headcount-card">
+        <div class="headcount-num" id="headcount">—</div>
+        <div class="headcount-lbl">Deployable Bench</div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Aging Distribution</div>
+        <div class="chart-wrap"><canvas id="agingChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Current vs Future Bench</div>
+        <div class="chart-wrap"><canvas id="cvfChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Location Split</div>
+        <div class="chart-wrap"><canvas id="locChart"></canvas></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════ SECTION 2: FORECAST ════ -->
+  <section>
+    <h2 class="section-title">30 / 60 / 90-Day Forecast</h2>
+    <div class="card">
+      <div class="card-label">Bench Headcount Forecast — Confirmed vs Projected</div>
+      <div class="chart-wrap-tall"><canvas id="forecastChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ════ SECTION 3: THRESHOLD ALERTS ════ -->
+  <section>
+    <h2 class="section-title">
+      Threshold Alerts
+      <span class="count" id="alerts-count"></span>
+    </h2>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Org Slice</th>
+              <th class="num">Current Bench</th>
+              <th class="num">Threshold</th>
+              <th class="num">Breach Amount</th>
+              <th>Severity</th>
+            </tr>
+          </thead>
+          <tbody id="alerts-body">
+            <tr><td colspan="5" class="placeholder">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════ SECTION 4: HIRING FREEZE ADVISORY ════ -->
+  <section>
+    <h2 class="section-title">
+      Hiring Freeze Advisory
+      <span class="count" id="freeze-count"></span>
+    </h2>
+    <div class="card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Skill</th>
+              <th class="num">Supply</th>
+              <th class="num">Demand</th>
+              <th class="num">Surplus / Deficit</th>
+              <th>Freeze Recommended</th>
+              <th>LLM Narrative</th>
+            </tr>
+          </thead>
+          <tbody id="freeze-body">
+            <tr><td colspan="6" class="placeholder">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ================================================================
+// SAMPLE DATA — actual pipeline output values, used when API down
+// ================================================================
+const TODAY = new Date();
+function isoDate(d) { return d.toISOString().slice(0, 10); }
+function addDays(d, n) { const r = new Date(d); r.setDate(d.getDate() + n); return r; }
+
+const SAMPLE = {
+  snapshot: {
+    total_headcount: 80,
+    aging_distribution: {
+      '<30 days':   0,
+      '31-60 days': 0,
+      '61-90 days': 0,
+      '>91 days':   39,
+      'Unknown':    41
+    },
+    current_vs_future: { 'Current bench': 39, 'Future bench': 41 },
+    by_location:       { 'Onsite': 63, 'Offshore': 17 }
+  },
+
+  forecast: Array.from({ length: 91 }, (_, i) => {
+    const confirmed = Math.min(Math.round(i * 0.11), 10);
+    const projected = Math.min(Math.round(i * 0.06), 6);
+    return {
+      forecast_date:            isoDate(addDays(TODAY, i)),
+      days_from_today:          i,
+      total_forecast_bench:     confirmed + projected,
+      confirmed_count:          confirmed,
+      projected_count:          projected,
+      forecast_confidence_band: projected === 0 ? 'HIGH' : 'MIXED',
+      bucket:                   i <= 30 ? '30d' : i <= 60 ? '60d' : '90d'
+    };
+  }),
+
+  alerts: [
+    { org_slice: 'CYBER_SEC',        current_bench_count:  6, bench_threshold:  3, breach_amount:  3, alert_severity: 'MEDIUM',   recommended_action: 'Review bench pipeline for CYBER_SEC. Current bench (6) exceeds threshold (3) by 3. Consider hiring freeze advisory.' },
+    { org_slice: 'DIGITAL_ENG',      current_bench_count:  4, bench_threshold:  5, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'CLOUD_INFRA',      current_bench_count:  3, bench_threshold:  4, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'DATA_ANALYTICS',   current_bench_count:  5, bench_threshold:  6, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'JAVA_PRACTICE',    current_bench_count:  7, bench_threshold:  8, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'QA_AUTOMATION',    current_bench_count:  3, bench_threshold:  4, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'SAP_PRACTICE',     current_bench_count:  9, bench_threshold: 10, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'DEVOPS_SRE',       current_bench_count:  2, bench_threshold:  3, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'MOBILE_DEV',       current_bench_count:  2, bench_threshold:  3, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'AI_ML',            current_bench_count:  4, bench_threshold:  5, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'FULLSTACK_WEB',    current_bench_count:  6, bench_threshold:  7, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'ERP_FUNCTIONAL',   current_bench_count:  3, bench_threshold:  4, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'TESTING_PERF',     current_bench_count:  2, bench_threshold:  3, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' },
+    { org_slice: 'ARCHITECTURE',     current_bench_count:  1, bench_threshold:  2, breach_amount: -1, alert_severity: 'OK',       recommended_action: 'No action required.' }
+  ],
+
+  freeze: [
+    { skill:'ERP-SAP',       total_supply:7, open_demand_count:2, supply_surplus: 5, freeze_recommended:true,  llm_narrative:'Implement an immediate hiring freeze for ERP-SAP. Bench surplus of 5 vs demand 2. Low avg rating 1.5 indicates upskilling priority. Review: 30-day.' },
+    { skill:'Selenium',      total_supply:5, open_demand_count:2, supply_surplus: 3, freeze_recommended:true,  llm_narrative:'Apply targeted hiring freeze for Selenium. Surplus 3, avg rating 3.5 — competent bench available. Defer hires and reallocate. Review: 30-day.' },
+    { skill:'Spring Boot',   total_supply:5, open_demand_count:3, supply_surplus: 2, freeze_recommended:true,  llm_narrative:'Enact hiring freeze for Spring Boot except critical needs. Surplus 2, avg rating 3.0. Monitor project assignments. Review: 60-day.' },
+    { skill:'Docker',        total_supply:4, open_demand_count:3, supply_surplus: 1, freeze_recommended:true,  llm_narrative:'Initiate hiring freeze for Docker unless urgent. Surplus 1, avg rating 3.0. Evaluate redeployment. Review: 60-day.' },
+    { skill:'AWS',           total_supply:4, open_demand_count:3, supply_surplus: 1, freeze_recommended:true,  llm_narrative:'Freeze AWS hiring except critical cloud initiatives. Surplus 1, avg rating 2.0 — prioritize training over hiring. Review: 60-day.' },
+    { skill:'Microservices', total_supply:4, open_demand_count:3, supply_surplus: 1, freeze_recommended:true,  llm_narrative:'Suspend Microservices hiring. Surplus 1, very low avg rating 1.0 — focus reskilling before recruiting. Review: 60-day.' },
+    { skill:'MySQL',         total_supply:3, open_demand_count:2, supply_surplus: 1, freeze_recommended:true,  llm_narrative:'Impose hiring freeze for MySQL. Surplus 1, avg rating 1.5. Consider training. Review: 60-day.' },
+    { skill:'Apache Spark',  total_supply:4, open_demand_count:3, supply_surplus: 1, freeze_recommended:true,  llm_narrative:'Pause Apache Spark hiring until bench is reallocated. Surplus 1, avg rating 1.5. Hold hires, evaluate internal development. Review: 60-day.' },
+    { skill:'Java',          total_supply:2, open_demand_count:8, supply_surplus:-6, freeze_recommended:false, llm_narrative:'Demand exceeds supply by 6 for Java. No freeze needed.' },
+    { skill:'Python',        total_supply:3, open_demand_count:9, supply_surplus:-6, freeze_recommended:false, llm_narrative:'Demand exceeds supply by 6 for Python. No freeze needed.' },
+    { skill:'React',         total_supply:1, open_demand_count:6, supply_surplus:-5, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Angular',       total_supply:2, open_demand_count:5, supply_surplus:-3, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Node.js',       total_supply:1, open_demand_count:4, supply_surplus:-3, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Kubernetes',    total_supply:0, open_demand_count:3, supply_surplus:-3, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Terraform',     total_supply:1, open_demand_count:3, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'PostgreSQL',    total_supply:1, open_demand_count:3, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Snowflake',     total_supply:0, open_demand_count:2, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Tableau',       total_supply:1, open_demand_count:3, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Power BI',      total_supply:0, open_demand_count:2, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Azure',         total_supply:1, open_demand_count:3, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Scala',         total_supply:0, open_demand_count:2, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Go Lang',       total_supply:0, open_demand_count:2, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'TypeScript',    total_supply:1, open_demand_count:3, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Kafka',         total_supply:0, open_demand_count:2, supply_surplus:-2, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'MongoDB',       total_supply:1, open_demand_count:2, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Redis',         total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Cassandra',     total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'GraphQL',       total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Spark SQL',     total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Hive',          total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Jenkins',       total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Ansible',       total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Splunk',        total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Dynatrace',     total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'JMeter',        total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Postman',       total_supply:1, open_demand_count:2, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Cucumber',      total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'TestNG',        total_supply:1, open_demand_count:2, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Maven',         total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'REST API',      total_supply:1, open_demand_count:2, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'gRPC',          total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'CQRS',          total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Hadoop',        total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'GitLab CI',     total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Chef',          total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Puppet',        total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'AppDynamics',   total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Selenium Grid', total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'SoapUI',        total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'MyBatis',       total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Hibernate',     total_supply:1, open_demand_count:2, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Swift',         total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Kotlin',        total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Ruby',          total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Spring MVC',    total_supply:1, open_demand_count:2, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'JPA',           total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'Gradle',        total_supply:0, open_demand_count:1, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+    { skill:'SOAP',          total_supply:1, open_demand_count:2, supply_surplus:-1, freeze_recommended:false, llm_narrative:'Demand exceeds supply. No freeze needed.' },
+  ]
+};
+
+// ================================================================
+// DATA FETCH WITH API FALLBACK
+// ================================================================
+async function fetchData() {
+  const urls = {
+    snapshot: '/api/bench/snapshot',
+    forecast: '/api/bench/forecast',
+    alerts:   '/api/bench/alerts',
+    freeze:   '/api/bench/hiring-freeze'
+  };
+  try {
+    const entries = await Promise.all(
+      Object.entries(urls).map(([key, url]) =>
+        fetch(url)
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(data => [key, data])
+      )
+    );
+    document.getElementById('mode-banner').className = 'banner live';
+    document.getElementById('mode-banner').textContent = '✓ Live data from API';
+    return Object.fromEntries(entries);
+  } catch {
+    // API unavailable — render with sample data
+    return SAMPLE;
+  }
+}
+
+// ================================================================
+// HELPERS
+// ================================================================
+function fmt(n) {
+  if (n == null || n === '') return '—';
+  return n;
+}
+function surplusHtml(v) {
+  if (v > 0) return `<span class="surplus-pos">+${v}</span>`;
+  if (v < 0) return `<span class="surplus-neg">${v}</span>`;
+  return `<span>0</span>`;
+}
+
+// ================================================================
+// SECTION 1 — BENCH SUMMARY
+// ================================================================
+function renderSummary(snap) {
+  document.getElementById('headcount').textContent = snap.total_headcount;
+
+  // Aging — horizontal bar (buckets ordered bottom-to-top so worst at top)
+  const agingOrder  = ['Unknown', '>91 days', '61-90 days', '31-60 days', '<30 days'];
+  const agingColors = ['#94a3b8', '#ef4444',  '#f97316',    '#eab308',     '#22c55e'];
+  const agingVals   = agingOrder.map(k => (snap.aging_distribution || {})[k] || 0);
+  new Chart(document.getElementById('agingChart'), {
+    type: 'bar',
+    data: {
+      labels: agingOrder,
+      datasets: [{
+        data: agingVals,
+        backgroundColor: agingColors,
+        borderRadius: 4,
+        barThickness: 16
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${ctx.raw} employees` }
+      }},
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, stepSize: 10 } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // Current vs Future donut
+  const cvf = snap.current_vs_future || {};
+  new Chart(document.getElementById('cvfChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(cvf),
+      datasets: [{
+        data: Object.values(cvf),
+        backgroundColor: ['#3B1F6B', '#C8E000'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } }
+      },
+      cutout: '60%'
+    }
+  });
+
+  // Location donut
+  const loc = snap.by_location || {};
+  new Chart(document.getElementById('locChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(loc),
+      datasets: [{
+        data: Object.values(loc),
+        backgroundColor: ['#3B1F6B', '#C8E000'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } }
+      },
+      cutout: '60%'
+    }
+  });
+}
+
+// ================================================================
+// SECTION 2 — FORECAST CHART
+// ================================================================
+
+// Inline plugin: vertical day-marker lines at day 30, 60, 90
+const dayMarkerPlugin = {
+  id: 'dayMarkers',
+  afterDraw(chart) {
+    const ctx  = chart.ctx;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data.length) return;
+    [30, 60, 90].forEach(day => {
+      const pt = meta.data[day];
+      if (!pt) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pt.x, chart.chartArea.top);
+      ctx.lineTo(pt.x, chart.chartArea.bottom);
+      ctx.strokeStyle = 'rgba(100,116,139,0.5)';
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.fillStyle = '#475569';
+      ctx.font      = 'bold 10px sans-serif';
+      ctx.fillText(`Day ${day}`, pt.x + 4, chart.chartArea.top + 13);
+      ctx.restore();
+    });
+  }
+};
+
+function renderForecast(rows) {
+  const labels    = rows.map(r => r.forecast_date);
+  const confirmed = rows.map(r => r.confirmed_count);
+  const projected = rows.map(r => r.projected_count);
+
+  new Chart(document.getElementById('forecastChart'), {
+    type: 'line',
+    plugins: [dayMarkerPlugin],
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Confirmed (HIGH confidence)',
+          data: confirmed,
+          borderColor: '#3B1F6B',
+          backgroundColor: 'rgba(59,31,107,0.07)',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          tension: 0.35,
+          fill: true
+        },
+        {
+          label: 'Projected (MIXED confidence)',
+          data: projected,
+          borderColor: '#C8E000',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [7, 4],
+          pointRadius: 0,
+          tension: 0.35
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } }
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 9 }, maxTicksLimit: 14, maxRotation: 40 },
+          grid:  { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          suggestedMax: 20,
+          ticks: { font: { size: 10 }, stepSize: 2 },
+          grid:  { color: 'rgba(0,0,0,0.05)' }
+        }
+      }
+    }
+  });
+}
+
+// ================================================================
+// SECTION 3 — THRESHOLD ALERTS TABLE
+// ================================================================
+function renderAlerts(rows) {
+  document.getElementById('alerts-count').textContent =
+    `${rows.length} org slices · ${rows.filter(r => r.alert_severity !== 'OK').length} breached`;
+
+  const sevRow   = { CRITICAL:'r-critical', HIGH:'r-high', MEDIUM:'r-medium', OK:'r-ok' };
+  const sevBadge = { CRITICAL:'b-critical', HIGH:'b-high', MEDIUM:'b-medium', OK:'b-ok' };
+
+  const tbody = document.getElementById('alerts-body');
+  tbody.innerHTML = rows.map(r => {
+    const breach = r.breach_amount > 0 ? `+${r.breach_amount}` : r.breach_amount;
+    return `
+      <tr class="${sevRow[r.alert_severity] || ''}">
+        <td><strong>${r.org_slice}</strong></td>
+        <td class="num">${r.current_bench_count}</td>
+        <td class="num">${r.bench_threshold}</td>
+        <td class="num">${breach}</td>
+        <td><span class="badge ${sevBadge[r.alert_severity] || ''}">${r.alert_severity}</span></td>
+      </tr>`;
+  }).join('');
+}
+
+// ================================================================
+// SECTION 4 — HIRING FREEZE TABLE
+// ================================================================
+function renderFreeze(rows) {
+  const freezeCount = rows.filter(r => r.freeze_recommended).length;
+  document.getElementById('freeze-count').textContent =
+    `${rows.length} skills · ${freezeCount} freeze recommended`;
+
+  const tbody = document.getElementById('freeze-body');
+  tbody.innerHTML = rows.map(r => {
+    const rowCls   = r.freeze_recommended ? 'r-freeze' : '';
+    const badgeCls = r.freeze_recommended ? 'b-freeze' : 'b-nofreeze';
+    const badgeTxt = r.freeze_recommended ? 'YES' : 'NO';
+    const narrative = r.llm_narrative || r.advisory_note || '—';
+    return `
+      <tr class="${rowCls}">
+        <td><strong>${r.skill}</strong></td>
+        <td class="num">${r.total_supply}</td>
+        <td class="num">${r.open_demand_count}</td>
+        <td class="num">${surplusHtml(r.supply_surplus)}</td>
+        <td style="text-align:center"><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+        <td class="narrative">${narrative}</td>
+      </tr>`;
+  }).join('');
+}
+
+// ================================================================
+// BOOTSTRAP
+// ================================================================
+document.getElementById('ts').textContent =
+  new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+
+fetchData().then(data => {
+  renderSummary(data.snapshot);
+  renderForecast(data.forecast);
+  renderAlerts(data.alerts);
+  renderFreeze(data.freeze);
+});
+</script>
+</body>
+</html>
