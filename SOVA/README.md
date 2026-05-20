@@ -9,13 +9,12 @@ flags exceptions, and serves results through a Next.js dashboard.
 ## Project Structure
 
 ```
-Team Mochaminds/
+SOVA/
 ├── api.py                        ← FastAPI backend (port 8000)
 ├── server.py                     ← Uvicorn entrypoint
 ├── schema.sql                    ← PostgreSQL DDL
 ├── requirements.txt              ← Python dependencies
 ├── .env                          ← Backend config (DB, rule thresholds)
-├── .gitignore
 │
 ├── agents/
 │   ├── __init__.py
@@ -65,6 +64,19 @@ Team Mochaminds/
 - **Python 3.10** (recommended — avoids DLL issues on Windows)
 - **Node.js 18+**
 - **PostgreSQL 12+**
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Backend** | Python 3.10, FastAPI, Uvicorn |
+| **Frontend** | Next.js 13+, Tailwind CSS |
+| **Database** | PostgreSQL 12+, SQLAlchemy 2.x, psycopg2 |
+| **Data Processing** | pandas, NumPy, openpyxl |
+| **Integrations** | gspread, google-auth (Google Sheets export) |
+| **Config / Env** | python-dotenv, `.env` + `.env.example` |
 
 ---
 
@@ -159,9 +171,8 @@ Report saved as: `SOVA_ValidityReport_YYYYMMDD_HHMMSS.xlsx`
 
 ## Submission
 
-Zip as: `TeamName_Agent02_SOVA_Submission.zip`
+Zip as: `SOVA.zip`
 
 ---
 
-## RM Contact
-For KT and field clarifications: **Samuel Anandkumar** via official hackathon channel.
+
